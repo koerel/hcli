@@ -32,11 +32,18 @@ Retrieve them at https://id.getharvest.com/`)
 	commando.Register("status").
 		SetDescription("see the time entries for a chosen date - defaults to today").
 		SetShortDescription("timer status").
-		AddFlag("date,d", "Date parameter in format YYYY-MM-DD", commando.String, time.Now().Format("2006-01-02")).
+		AddFlag("date,d", "date parameter in format YYYY-MM-DD", commando.String, time.Now().Format("2006-01-02")).
+		AddFlag("week,w", "get week totals", commando.Bool, nil).
 		SetAction(func(args map[string]commando.ArgValue, flags map[string]commando.FlagValue) {
 			date, err := flags["date"].GetString()
 			handle(err)
-			status(date)
+			week, err := flags["week"].GetBool()
+			handle(err)
+			if week {
+				statusWeek()
+			} else {
+				status(date)
+			}
 		})
 
 	commando.Register("start").
@@ -68,7 +75,9 @@ func getApp() *App {
 
 func status(date string) {
 	app := getApp()
-	entries := app.c.GetEntries(date, app.me.Id)
+	fmt.Println(date)
+	entries := app.c.GetEntries(date, date, app.me.Id)
+	fmt.Println(entries)
 	for i, j := 0, len(entries)-1; i < j; i, j = i+1, j-1 {
 		entries[i], entries[j] = entries[j], entries[i]
 	}
@@ -105,6 +114,60 @@ func status(date string) {
 	handle(err)
 	t.AppendRows([]table.Row{
 		{"Total", "", "", "", "", totalTime, ""},
+	})
+	t.SetStyle(table.StyleColoredDark)
+	t.Render()
+}
+
+func statusWeek() {
+	app := getApp()
+	ti := time.Now()
+	y, m, d := ti.Date()
+	da := time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
+	to := da.Format("2006-01-02")
+	for da.Weekday() != time.Monday {
+		da = da.AddDate(0, 0, -1)
+	}
+	from := da.Format("2006-01-02")
+	entries := app.c.GetEntries(from, to, app.me.Id)
+	for i, j := 0, len(entries)-1; i < j; i, j = i+1, j-1 {
+		entries[i], entries[j] = entries[j], entries[i]
+	}
+	t := table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+	t.AppendHeader(table.Row{"Client", "Project", "Task", "Date", "Start", "End", "Duration", "Running"})
+	var total float64
+	for i, e := range entries {
+		var duration time.Duration
+		var start time.Time
+		var end time.Time
+		var err error
+		running := "*"
+		if i > 0 && e.SpentDate != entries[i-1].SpentDate {
+			t.AppendSeparator()
+		}
+		if !e.IsRunning {
+			running = ""
+			end, err = time.Parse("2006-01-02 15:04", e.SpentDate+" "+e.EndedTime)
+			handle(err)
+			start, err = time.Parse("2006-01-02 15:04", e.SpentDate+" "+e.StartedTime)
+			handle(err)
+		} else {
+			start, err = time.Parse("2006-01-02 15:04", e.SpentDate+" "+e.StartedTime)
+			handle(err)
+			end, _ = time.Parse("2006-01-02 15:04", time.Now().Format("2006-01-02 15:04"))
+		}
+		duration = end.Sub(start)
+		total += duration.Seconds()
+		t.AppendRows([]table.Row{
+			{e.Client.Name, e.Project.Name, e.Task.Name, e.SpentDate, e.StartedTime, e.EndedTime, duration, running},
+		})
+	}
+	t.AppendSeparator()
+	totalTime, err := time.ParseDuration(fmt.Sprintf("%f", total) + "s")
+	handle(err)
+	t.AppendRows([]table.Row{
+		{"Total", "", "", "", "", "", totalTime, ""},
 	})
 	t.SetStyle(table.StyleColoredDark)
 	t.Render()

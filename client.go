@@ -25,6 +25,7 @@ func NewHarvestClient(token string, account string) *HarvestClient {
 	c.account = account
 	c.baseUrl = "https://api.harvestapp.com/v2"
 	c.client = &http.Client{}
+	c.debugMode = false
 
 	return c
 }
@@ -76,7 +77,7 @@ func (c *HarvestClient) StopTimer(e TimeEntry) {
 func (c *HarvestClient) GetEntriesToday(userId int) []TimeEntry {
 	time := time.Now()
 	date := time.Format("2006-01-02")
-	return c.GetEntries(date, userId)
+	return c.GetEntries(date, date, userId)
 }
 
 func (c *HarvestClient) GetRunningEntries(userId int) []TimeEntry {
@@ -93,16 +94,17 @@ func (c *HarvestClient) GetRunningEntries(userId int) []TimeEntry {
 	return er.TimeEntries
 }
 
-func (c *HarvestClient) GetEntries(date string, userId int) []TimeEntry {
+func (c *HarvestClient) GetEntries(dateFrom string, dateTo string, userId int) []TimeEntry {
 	q := url.Values{}
 	q.Add("user_id", strconv.Itoa(userId))
-	q.Add("from", date)
-	q.Add("to", date)
+	q.Add("from", dateFrom)
+	q.Add("to", dateTo)
 	res, err := c.Get("/time_entries?" + q.Encode())
 	handle(err)
 	er := new(TimeEntryResponse)
 	body, err := ioutil.ReadAll(res.Body)
 	handle(err)
+	c.debug(string(body))
 	json.Unmarshal(body, &er)
 
 	return er.TimeEntries
