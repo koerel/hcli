@@ -95,9 +95,6 @@ func status(date string) {
 			end, _ = time.Parse("2006-01-02 15:04", time.Now().Format("2006-01-02 15:04"))
 		}
 		duration = end.Sub(start)
-		fmt.Println(start)
-		fmt.Print(end)
-		fmt.Println(duration)
 		total += duration.Seconds()
 		t.AppendRows([]table.Row{
 			{e.Client.Name, e.Project.Name, e.Task.Name, e.StartedTime, e.EndedTime, duration, running},

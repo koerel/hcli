@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -11,10 +12,11 @@ import (
 )
 
 type HarvestClient struct {
-	token   string
-	account string
-	baseUrl string
-	client  *http.Client
+	token     string
+	account   string
+	baseUrl   string
+	debugMode bool
+	client    *http.Client
 }
 
 func NewHarvestClient(token string, account string) *HarvestClient {
@@ -59,8 +61,11 @@ func (c *HarvestClient) StartTimer(p Project, t Task) {
 	}
 	data, err := json.Marshal(entry)
 	handle(err)
-	_, err = c.Post("/time_entries", string(data))
+	res, err := c.Post("/time_entries", string(data))
 	handle(err)
+	body, err := ioutil.ReadAll(res.Body)
+	handle(err)
+	c.debug(string(body))
 }
 
 func (c *HarvestClient) StopTimer(e TimeEntry) {
@@ -138,5 +143,11 @@ func (c *HarvestClient) setAuthHeaders(req *http.Request) {
 }
 
 func (c *HarvestClient) setContentType(req *http.Request) {
-	req.Header.Add("Harvest-Account-ID", c.account)
+	req.Header.Add("Content-Type", "application/json")
+}
+
+func (c *HarvestClient) debug(data interface{}) {
+	if c.debugMode {
+		fmt.Println(data)
+	}
 }
