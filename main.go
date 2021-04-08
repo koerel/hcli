@@ -75,13 +75,40 @@ func status(date string) {
 
 	t := table.NewWriter()
 	t.SetOutputMirror(os.Stdout)
-	t.AppendHeader(table.Row{"Client", "Project", "Task", "Start", "End", "Running"})
-
+	t.AppendHeader(table.Row{"Client", "Project", "Task", "Start", "End", "Duration", "Running"})
+	var total float64
 	for _, e := range entries {
+		var duration time.Duration
+		var start time.Time
+		var end time.Time
+		var err error
+		running := "*"
+		if !e.IsRunning {
+			running = ""
+			end, err = time.Parse("2006-01-02 15:04", date+" "+e.EndedTime)
+			handle(err)
+			start, err = time.Parse("2006-01-02 15:04", date+" "+e.StartedTime)
+			handle(err)
+		} else {
+			start, err = time.Parse("2006-01-02 15:04", date+" "+e.StartedTime)
+			handle(err)
+			end, _ = time.Parse("2006-01-02 15:04", time.Now().Format("2006-01-02 15:04"))
+		}
+		duration = end.Sub(start)
+		fmt.Println(start)
+		fmt.Print(end)
+		fmt.Println(duration)
+		total += duration.Seconds()
 		t.AppendRows([]table.Row{
-			{e.Client.Name, e.Project.Name, e.Task.Name, e.StartedTime, e.EndedTime, e.IsRunning},
+			{e.Client.Name, e.Project.Name, e.Task.Name, e.StartedTime, e.EndedTime, duration, running},
 		})
 	}
+	t.AppendSeparator()
+	totalTime, err := time.ParseDuration(fmt.Sprintf("%f", total) + "s")
+	handle(err)
+	t.AppendRows([]table.Row{
+		{"Total", "", "", "", "", totalTime, ""},
+	})
 	t.SetStyle(table.StyleColoredDark)
 	t.Render()
 }
