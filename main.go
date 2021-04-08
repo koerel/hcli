@@ -75,9 +75,7 @@ func getApp() *App {
 
 func status(date string) {
 	app := getApp()
-	fmt.Println(date)
 	entries := app.c.GetEntries(date, date, app.me.Id)
-	fmt.Println(entries)
 	for i, j := 0, len(entries)-1; i < j; i, j = i+1, j-1 {
 		entries[i], entries[j] = entries[j], entries[i]
 	}
