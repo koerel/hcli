@@ -17,64 +17,6 @@ type HarvestClient struct {
 	client  *http.Client
 }
 
-type User struct {
-	Id        int    `json:"id"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-}
-
-type Project struct {
-	Id   int    `json:"id"`
-	Name string `json:"name"`
-}
-
-type Client struct {
-	Id   int    `json:"id"`
-	Name string `json:"name"`
-}
-
-type Assignment struct {
-	Id              int              `json:"id"`
-	Project         Project          `json:"project"`
-	Client          Client           `json:"client"`
-	TaskAssignments []TaskAssignment `json:"task_assignments"`
-}
-
-type AssignmentResponse struct {
-	Assignments []Assignment `json:"project_assignments"`
-}
-
-type Task struct {
-	Id   int    `json:"id"`
-	Name string `json:"name"`
-}
-
-type TaskAssignment struct {
-	Id   int  `json:"id"`
-	Task Task `json:"task"`
-}
-
-type TimeEntryInput struct {
-	ProjectId int    `json:"project_id"`
-	TaskId    int    `json:"task_id"`
-	SpentDate string `json:"spent_date"`
-}
-
-type TimeEntry struct {
-	Id          int     `json:"id"`
-	SpentDate   string  `json:"spent_date"`
-	Client      Client  `json:"client"`
-	Project     Project `json:"project"`
-	Task        Task    `json:"task"`
-	StartedTime string  `json:"started_time"`
-	EndedTime   string  `json:"ended_time"`
-	IsRunning   bool    `json:"is_running"`
-}
-
-type TimeEntryResponse struct {
-	TimeEntries []TimeEntry `json:"time_entries"`
-}
-
 func NewHarvestClient(token string, account string) *HarvestClient {
 	c := new(HarvestClient)
 	c.token = token
@@ -163,11 +105,8 @@ func (c *HarvestClient) GetEntries(date string, userId int) []TimeEntry {
 
 func (c *HarvestClient) Get(url string) (*http.Response, error) {
 	req, err := http.NewRequest("GET", c.baseUrl+url, nil)
-	if err != nil {
-		panic(err)
-	}
-	req.Header.Add("Authorization", "Bearer "+c.token)
-	req.Header.Add("Harvest-Account-ID", c.account)
+	handle(err)
+	c.setAuthHeaders(req)
 	res, err := c.client.Do(req)
 
 	return res, err
@@ -175,11 +114,8 @@ func (c *HarvestClient) Get(url string) (*http.Response, error) {
 
 func (c *HarvestClient) Patch(url string) (*http.Response, error) {
 	req, err := http.NewRequest("PATCH", c.baseUrl+url, nil)
-	if err != nil {
-		panic(err)
-	}
-	req.Header.Add("Authorization", "Bearer "+c.token)
-	req.Header.Add("Harvest-Account-ID", c.account)
+	handle(err)
+	c.setAuthHeaders(req)
 	res, err := c.client.Do(req)
 
 	return res, err
@@ -188,13 +124,19 @@ func (c *HarvestClient) Patch(url string) (*http.Response, error) {
 func (c *HarvestClient) Post(url string, body string) (*http.Response, error) {
 	r := strings.NewReader(body)
 	req, err := http.NewRequest("POST", c.baseUrl+url, r)
-	if err != nil {
-		panic(err)
-	}
-	req.Header.Add("Authorization", "Bearer "+c.token)
-	req.Header.Add("Harvest-Account-ID", c.account)
-	req.Header.Add("Content-Type", "application/json")
+	handle(err)
+	c.setAuthHeaders(req)
+	c.setContentType(req)
 	res, err := c.client.Do(req)
 
 	return res, err
+}
+
+func (c *HarvestClient) setAuthHeaders(req *http.Request) {
+	req.Header.Add("Authorization", "Bearer "+c.token)
+	req.Header.Add("Harvest-Account-ID", c.account)
+}
+
+func (c *HarvestClient) setContentType(req *http.Request) {
+	req.Header.Add("Harvest-Account-ID", c.account)
 }

@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/jedib0t/go-pretty/v6/table"
 	fuzzyfinder "github.com/ktr0731/go-fuzzyfinder"
@@ -29,10 +30,13 @@ Expects env vars HARVEST_API_TOKEN & HARVEST_ACCOUNT_ID
 Retrieve them at https://id.getharvest.com/`)
 
 	commando.Register("status").
-		SetDescription("see the current time entries for today").
+		SetDescription("see the time entries for a chosen date - defaults to today").
 		SetShortDescription("timer status").
+		AddFlag("date,d", "Date parameter in format YYYY-MM-DD", commando.String, time.Now().Format("2006-01-02")).
 		SetAction(func(args map[string]commando.ArgValue, flags map[string]commando.FlagValue) {
-			status()
+			date, err := flags["date"].GetString()
+			handle(err)
+			status(date)
 		})
 
 	commando.Register("start").
@@ -62,9 +66,9 @@ func getApp() *App {
 	return &app
 }
 
-func status() {
+func status(date string) {
 	app := getApp()
-	entries := app.c.GetEntriesToday(app.me.Id)
+	entries := app.c.GetEntries(date, app.me.Id)
 	for i, j := 0, len(entries)-1; i < j; i, j = i+1, j-1 {
 		entries[i], entries[j] = entries[j], entries[i]
 	}
@@ -120,7 +124,7 @@ func start() {
 	}
 	task := tasks[idx[0]].Task
 	app.c.StartTimer(assignment.Project, task)
-	status()
+	status(time.Now().Format("2006-01-02"))
 }
 
 func stop() {
@@ -129,7 +133,7 @@ func stop() {
 	if len(entries) > 0 {
 		app.c.StopTimer(entries[0])
 	}
-	status()
+	status(time.Now().Format("2006-01-02"))
 }
 
 func handle(err error) {
