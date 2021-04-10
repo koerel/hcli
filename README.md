@@ -1,5 +1,7 @@
 # HCLI
 
+[![asciicast](https://asciinema.org/a/wtkt5jLFNUwPMJQagSfrTO7MA.svg)](https://asciinema.org/a/wtkt5jLFNUwPMJQagSfrTO7MA)
+
 ```bash
 
 $ hcli help
